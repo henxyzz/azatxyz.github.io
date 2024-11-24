@@ -1,34 +1,34 @@
-# Gunakan image dasar
+# Gunakan base image Ubuntu
 FROM ubuntu:20.04
 
-# Set environment variable untuk menghindari interaksi selama build
+# Set environment untuk instalasi non-interaktif
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Update dan install paket yang diperlukan
-RUN apt-get update && apt-get upgrade -y && apt-get install -y \
-    curl \
-    openssh-server \
-    nginx \
-    sudo \
+# Update sistem dan install paket yang dibutuhkan
+RUN apt-get update && apt-get install -y \
+    xrdp \
+    xfce4 \
+    xfce4-terminal \
+    dbus-x11 \
+    xauth \
+    xfonts-base \
+    xserver-xorg-core \
     && apt-get clean
 
-# Setup Nginx dan SSH
-RUN mkdir /var/run/sshd
-RUN echo 'root:root' | chpasswd
+# Buat user untuk login RDP
+RUN useradd -m -s /bin/bash rdpuser && \
+    echo "rdpuser:password123" | chpasswd
 
-# Konfigurasi SSH untuk membuka port 22
-RUN sed -i 's/#Port 22/Port 22/' /etc/ssh/sshd_config
-RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+# Konfigurasi xRDP
+RUN echo "xfce4-session" > /home/rdpuser/.xsession && \
+    sed -i 's/port=3389/port=3389/' /etc/xrdp/xrdp.ini && \
+    sed -i 's/console/anybody/' /etc/xrdp/sesman.ini
 
-# Install tmate untuk SSH session sharing
-RUN wget -nc https://github.com/tmate-io/tmate/releases/download/2.4.0/tmate-2.4.0-static-linux-i386.tar.xz &> /dev/null
-RUN tar --skip-old-files -xvf tmate-2.4.0-static-linux-i386.tar.xz &> /dev/null
+# Set permissions agar user bisa menggunakan xRDP
+RUN chown -R rdpuser:rdpuser /home/rdpuser
 
-# Copy konfigurasi dan file aplikasi (jika ada)
-COPY ./my-app /var/www/html
+# Buka port 3389 untuk RDP
+EXPOSE 3389
 
-# Expose port yang diperlukan
-EXPOSE 80 22
-
-# Jalankan SSH dan Nginx secara bersamaan
-CMD service ssh start && nginx -g 'daemon off;'
+# Jalankan xRDP saat container dimulai
+CMD ["/usr/sbin/xrdp", "--nodaemon"]
