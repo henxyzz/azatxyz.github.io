@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload File</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #2c3e50;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .upload-container {
+      background-color: #34495e;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 300px;
+    }
+    select, textarea, input[type="file"], input[type="text"] {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    button {
+      background-color: #1abc9c;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #16a085;
+    }
+  </style>
+</head>
+<body>
+  <div class="upload-container">
+    <h2>Upload File</h2>
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+      <label for="destination">Pilih tujuan upload:</label>
+      <select name="destination" id="destination" onchange="toggleInputFields()">
+        <option value="public">Public (HTML)</option>
+        <option value="routes">Routes (Node.js)</option>
+      </select>
+
+      <div id="html-upload" class="upload-section">
+        <label for="html-code">Masukkan kode HTML:</label><br>
+        <textarea name="html-code" id="html-code" rows="6" placeholder="Masukkan HTML di sini"></textarea>
+      </div>
+
+      <div id="js-upload" class="upload-section" style="display: none;">
+        <label for="file">Pilih file Node.js (.js) atau masukkan kode JavaScript:</label><br>
+        <input type="file" name="file" id="file" accept=".js"><br>
+        <textarea name="js-code" id="js-code" rows="6" placeholder="Masukkan kode JavaScript di sini"></textarea><br>
+        <label for="name">Nama file JavaScript:</label><br>
+        <input type="text" name="name" id="name" placeholder="Nama file baru">
+      </div>
+
+      <button type="submit">Upload</button>
+    </form>
+
+    <h3>File yang Ada:</h3>
+    <div id="file-list"></div>
+  </div>
+
+  <script>
+    function toggleInputFields() {
+      const destination = document.getElementById('destination').value;
+      if (destination === 'public') {
+        document.getElementById('html-upload').style.display = 'block';
+        document.getElementById('js-upload').style.display = 'none';
+      } else {
+        document.getElementById('html-upload').style.display = 'none';
+        document.getElementById('js-upload').style.display = 'block';
+      }
+    }
+
+    // Fetch file list
+    function fetchFileList(folder) {
+      fetch(`/files?folder=${folder}`)
+        .then(response => response.json())
+        .then(files => {
+          const fileList = document.getElementById('file-list');
+            fileListContainer.innerHTML = ''; // Clear previous list
+            files.forEach(file => {
+              const fileItem = document.createElement('div');
+              fileItem.innerHTML = `
+                <div style="margin-bottom: 10px; padding: 10px; background-color: #34495e; border-radius: 5px;">
+                  <span>${file}</span>
+                  <button onclick="editFile('${folder}', '${file}')">Edit</button>
+                  <button onclick="deleteFile('${folder}', '${file}')">Hapus</button>
+                </div>
+              `;
+              fileListContainer.appendChild(fileItem);
+            });
+          })
+          .catch(error => console.error('Error fetching file list:', error));
+      }
+
+      // Edit file (redirect to edit page)
+      function editFile(folder, filename) {
+        window.location.href = `/edit?folder=${folder}&filename=${filename}`;
+      }
+
+      // Delete file
+      function deleteFile(folder, filename) {
+        const confirmation = confirm(`Apakah Anda yakin ingin menghapus file ${filename}?`);
+        if (confirmation) {
+          fetch(`/delete-file?folder=${folder}&filename=${filename}`, {
+            method: 'DELETE',
+          })
+          .then(response => response.json())
+          .then(data => {
+            alert(data.message);
+            fetchFileList(folder);  // Refresh file list
+          })
+          .catch(error => console.error('Error deleting file:', error));
+        }
+      }
+
+      // Load file list on page load
+      window.onload = function() {
+        fetchFileList('public');  // Default to public folder
+      };
+    </script>
+</body>
+</html>

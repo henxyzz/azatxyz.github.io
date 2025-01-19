@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Documentation</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>API Documentation</h1>
+      <button onclick="window.location.href='/'">Home</button>
+    </header>
+
+    <section class="api-list">
+      <h2>Available Endpoints</h2>
+      <ul>
+        <li>
+          <strong>/api/ytsearch</strong>
+          <p><em>GET</em> - Search for YouTube videos by query.</p>
+          <p><strong>Usage:</strong> `/api/ytsearch?query=example`</p>
+          <p><strong>Response:</strong> JSON list of video results with title, URL, views, etc.</p>
+        </li>
+        <li>
+          <strong>/api/download/audio</strong>
+          <p><em>GET</em> - Download audio from YouTube videos.</p>
+          <p><strong>Usage:</strong> `/api/download/audio?url=https://youtube.com/watch?v=example&quality=128`</p>
+          <p><strong>Response:</strong> JSON with download URL.</p>
+        </li>
+        <li>
+          <strong>/api/download/video</strong>
+          <p><em>GET</em> - Download video from YouTube.</p>
+          <p><strong>Usage:</strong> `/api/download/video?url=https://youtube.com/watch?v=example&quality=360`</p>
+          <p><strong>Response:</strong> JSON with download URL.</p>
+        </li>
+      </ul>
+    </section>
+  </div>
+</body>
+</html>
