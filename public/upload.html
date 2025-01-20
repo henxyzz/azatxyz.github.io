@@ -12,7 +12,8 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      flex-direction: column;
+      min-height: 100vh;
       margin: 0;
     }
     .upload-container {
@@ -21,6 +22,7 @@
       border-radius: 10px;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       width: 300px;
+      margin-bottom: 20px;
     }
     select, textarea, input[type="file"], input[type="text"] {
       width: 100%;
@@ -37,6 +39,13 @@
     button:hover {
       background-color: #16a085;
     }
+    .folder-button {
+      background-color: #3498db;
+      margin-top: 20px;
+    }
+    .folder-button:hover {
+      background-color: #2980b9;
+    }
   </style>
 </head>
 <body>
@@ -49,11 +58,19 @@
         <option value="routes">Routes (Node.js)</option>
       </select>
 
+      <!-- Input HTML untuk Public -->
       <div id="html-upload" class="upload-section">
         <label for="html-code">Masukkan kode HTML:</label><br>
-        <textarea name="html-code" id="html-code" rows="6" placeholder="Masukkan HTML di sini"></textarea>
+        <textarea name="html-code" id="html-code" rows="6" placeholder="Masukkan HTML di sini"></textarea><br>
+
+        <label for="html-file">Atau pilih file HTML:</label><br>
+        <input type="file" name="html-file" id="html-file" accept=".html"><br>
+
+        <label for="new-html-name">Nama file HTML baru:</label><br>
+        <input type="text" name="new-html-name" id="new-html-name" placeholder="Nama file baru"><br>
       </div>
 
+      <!-- Input untuk Routes (Node.js) -->
       <div id="js-upload" class="upload-section" style="display: none;">
         <label for="file">Pilih file Node.js (.js) atau masukkan kode JavaScript:</label><br>
         <input type="file" name="file" id="file" accept=".js"><br>
@@ -64,14 +81,25 @@
 
       <button type="submit">Upload</button>
     </form>
-
-    <h3>File yang Ada:</h3>
-    <div id="file-list"></div>
   </div>
 
+  <h3>Daftar File</h3>
+
+  <!-- Tombol untuk menampilkan file di folder public atau routes -->
+  <div>
+    <button class="folder-button" onclick="showFiles('public')">Lihat Files Public</button>
+    <button class="folder-button" onclick="showFiles('routes')">Lihat Files Routes</button>
+  </div>
+
+  <div id="file-list"></div>
+
   <script>
+    let currentFolder = 'public'; // Set default folder to public
+
     function toggleInputFields() {
       const destination = document.getElementById('destination').value;
+      currentFolder = destination; // Update the current folder based on dropdown selection
+      fetchFiles(currentFolder);  // Fetch files for the selected folder
       if (destination === 'public') {
         document.getElementById('html-upload').style.display = 'block';
         document.getElementById('js-upload').style.display = 'none';
@@ -81,53 +109,78 @@
       }
     }
 
-    // Fetch file list
-    function fetchFileList(folder) {
-      fetch(`/files?folder=${folder}`)
-        .then(response => response.json())
-        .then(files => {
-          const fileList = document.getElementById('file-list');
-            fileListContainer.innerHTML = ''; // Clear previous list
-            files.forEach(file => {
-              const fileItem = document.createElement('div');
-              fileItem.innerHTML = `
-                <div style="margin-bottom: 10px; padding: 10px; background-color: #34495e; border-radius: 5px;">
-                  <span>${file}</span>
-                  <button onclick="editFile('${folder}', '${file}')">Edit</button>
-                  <button onclick="deleteFile('${folder}', '${file}')">Hapus</button>
-                </div>
-              `;
-              fileListContainer.appendChild(fileItem);
-            });
-          })
-          .catch(error => console.error('Error fetching file list:', error));
-      }
+    async function fetchFiles(folder) {
+      const response = await fetch(`/files?folder=${folder}`);
+      const data = await response.json();
 
-      // Edit file (redirect to edit page)
-      function editFile(folder, filename) {
-        window.location.href = `/edit?folder=${folder}&filename=${filename}`;
+      if (response.ok) {
+        renderFileList(folder, data.files);
+      } else {
+        alert(data.error);
       }
+    }
 
-      // Delete file
-      function deleteFile(folder, filename) {
-        const confirmation = confirm(`Apakah Anda yakin ingin menghapus file ${filename}?`);
-        if (confirmation) {
-          fetch(`/delete-file?folder=${folder}&filename=${filename}`, {
-            method: 'DELETE',
-          })
-          .then(response => response.json())
-          .then(data => {
-            alert(data.message);
-            fetchFileList(folder);  // Refresh file list
-          })
-          .catch(error => console.error('Error deleting file:', error));
-        }
+    function renderFileList(folder, files) {
+      const fileList = document.getElementById('file-list');
+      fileList.innerHTML = `<h4>Folder: ${folder}</h4>`;
+
+      if (files && files.length > 0) {
+        files.forEach((file) => {
+          const fileItem = document.createElement('div');
+          fileItem.style.marginBottom = '10px';
+
+          fileItem.innerHTML = `
+            <span>${file}</span>
+            <button onclick="viewFile('${folder}', '${file}')">Lihat</button>
+            <button onclick="confirmDeleteFile('${folder}', '${file}')">Hapus</button>
+          `;
+
+          fileList.appendChild(fileItem);
+        });
+      } else {
+        fileList.innerHTML += '<p>Tidak ada file di folder ini.</p>';
       }
+    }
 
-      // Load file list on page load
-      window.onload = function() {
-        fetchFileList('public');  // Default to public folder
-      };
-    </script>
+    function viewFile(folder, fileName) {
+      if (folder === 'public') {
+        window.open(`/${fileName}`, '_blank');
+      } else {
+        alert('Tidak dapat membuka file route di browser.');
+      }
+    }
+
+    function confirmDeleteFile(folder, fileName) {
+      const isConfirmed = confirm(`Apakah Anda yakin ingin menghapus file ${fileName}?`);
+      if (isConfirmed) {
+        deleteFile(folder, fileName);
+      }
+    }
+
+    async function deleteFile(folder, fileName) {
+      const response = await fetch('/files', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder, fileName }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        alert(data.message);
+        fetchFiles(folder);  // Refresh daftar file setelah penghapusan
+      } else {
+        alert(data.error);
+      }
+    }
+
+    function showFiles(folder) {
+      fetchFiles(folder);  // Fetch and display files for the selected folder
+    }
+
+    // Load files for the default folder (public) when the page is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchFiles(currentFolder);  // Default to showing public files
+    });
+  </script>
 </body>
 </html>

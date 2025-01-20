@@ -3,7 +3,12 @@ const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const dotenv = require('dotenv');
 const { exec } = require('child_process');
+
+// Load environment variables from .env
+dotenv.config();
+
 const app = express();
 const port = 3000;
 
@@ -15,12 +20,22 @@ const limiter = rateLimit({
 });
 
 app.use('/api/', limiter);
-
-// Middleware untuk melayani file statis dari folder 'public' dan 'routes'
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(path.join(__dirname, 'routes')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// Middleware untuk melayani file statis dari folder 'public'
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Verifikasi password untuk akses halaman upload
+app.get('/upload', (req, res) => {
+  const password = req.query.password;  // Mengambil password dari query string
+
+  if (password === process.env.UPLOAD_PASSWORD) {
+    res.sendFile(path.join(__dirname, 'public', 'upload.html'));  // Akses halaman upload
+  } else {
+    res.status(403).send('Password salah. Akses ditolak.');
+  }
+});
 
 // Setup Multer Storage untuk file yang di-upload
 const storage = multer.diskStorage({
@@ -36,134 +51,130 @@ const storage = multer.diskStorage({
     } else {
       cb(null, req.body.name || file.originalname); // Jika file JS, pakai nama yang diberikan user
     }
-  }
+  },
 });
 
 const upload = multer({ storage });
 
-// Endpoint untuk menampilkan form upload
-app.get('/upload', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'upload.html'));
-});
-
 // Endpoint untuk menangani file upload
 app.post('/upload', upload.single('file'), (req, res) => {
-  if (!req.file && !req.body['html-code'] && !req.body['js-code']) {
-    return res.status(400).send('No file or code uploaded.');
-  }
+  const folder = req.body.destination;
+  const filePath = path.join(__dirname, folder, req.file.filename);
 
-  if (req.body.destination === 'public' && req.body['html-code']) {
-    // Jika HTML diupload
-    const htmlContent = req.body['html-code'];
-    const fileName = req.body.name || 'index.html'; // Nama file HTML, default index.html
-    fs.writeFileSync(path.join(__dirname, 'public', fileName), htmlContent);
-    return res.send(`HTML berhasil diupload dengan nama: ${fileName}`);
-  }
-
-  if (req.body.destination === 'routes' && req.body['js-code']) {
-    // Jika JavaScript diupload via kode
-    const jsContent = req.body['js-code'];
-    const fileName = req.body.name || 'script.js'; // Nama file JS, default script.js
-    fs.writeFileSync(path.join(__dirname, 'routes', fileName), jsContent);
-    return res.send(`File JavaScript berhasil diupload dengan nama: ${fileName}`);
-  }
-
-  res.send('File berhasil diupload.');
-});
-
-// Membaca file di folder 'routes' secara otomatis dan menambah route
-const routesPath = path.join(__dirname, 'routes');
-let routeFiles = [];
-
-function loadRoutes() {
-  // Membaca ulang semua file .js di folder routes
-  fs.readdirSync(routesPath).forEach((file) => {
-    if (file.endsWith('.js') && !routeFiles.includes(file)) {
-      const routeName = file.replace('.js', ''); // Menghilangkan ekstensi .js
-      const routePath = path.join(routesPath, file);
-      const route = require(routePath);
-      app.use(`/api/${routeName}`, route);
-      console.log(`Route /api/${routeName} ditambahkan dari ${file}`);
-      routeFiles.push(file); // Menambahkan file ke array agar tidak duplikat
-    }
-  });
-}
-
-// Load routes pertama kali
-loadRoutes();
-
-// Watch for changes in the routes folder and add new routes
-fs.watch(routesPath, (eventType, filename) => {
-  if (filename && filename.endsWith('.js')) {
-    console.log(`File ${filename} diubah atau ditambahkan di folder routes`);
-    // Load ulang semua routes
-    loadRoutes();
-    installDependenciesIfNeeded(filename);  // Cek dan install dependencies jika diperlukan
+  if (folder === 'routes') {
+    const moduleName = req.file.filename.replace('.js', '');
+    updatePackageJson(moduleName, () => {
+      res.send(`File JavaScript berhasil diupload dan endpoint tersedia di /api/${moduleName}`);
+      registerRoutes(); // Registrasi ulang endpoint
+    });
+  } else {
+    res.send(`File berhasil diupload ke folder ${folder}`);
   }
 });
 
-// Memantau perubahan di public untuk file statis
-fs.watch(path.join(__dirname, 'public'), (eventType, filename) => {
-  if (filename) {
-    console.log(`File ${filename} diubah atau ditambahkan di folder public`);
-  }
-});
-
-// Fungsi untuk memeriksa dan menambahkan dependency di package.json
-function installDependenciesIfNeeded(filename) {
-  const routePath = path.join(__dirname, 'routes', filename);
-  const route = require(routePath);
-  const requiredModules = Object.keys(route);  // Memeriksa module yang diperlukan oleh file route
-
-  // Cek apakah ada module baru yang perlu ditambahkan
-  const packageJsonPath = path.join(__dirname, 'package.json');
-  const packageJson = require(packageJsonPath);
-
-  requiredModules.forEach(module => {
-    if (!packageJson.dependencies[module]) {
-      // Tambahkan module baru ke dependencies
-      console.log(`Menambahkan module ${module} ke package.json`);
-      packageJson.dependencies[module] = 'latest';  // Menambahkan versi terbaru
-      fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
-
-      // Jalankan npm install untuk menambah dependensi tersebut
-      exec('npm install', (error, stdout, stderr) => {
-        if (error) {
-          console.error(`Error saat menjalankan npm install: ${stderr}`);
-        } else {
-          console.log(`Modules berhasil diinstall: ${stdout}`);
-        }
-      });
-    }
-  });
-}
-
-// Endpoint untuk mendapatkan daftar file dari public atau routes
+// Endpoint untuk mendapatkan daftar file di folder tertentu
 app.get('/files', (req, res) => {
-  const folder = req.query.folder === 'public' ? 'public' : 'routes';
-  const folderPath = path.join(__dirname, folder);
+  const folder = req.query.folder;
+  if (!folder || (folder !== 'public' && folder !== 'routes')) {
+    return res.status(400).json({ error: 'Folder tidak valid. Gunakan "public" atau "routes".' });
+  }
 
-  fs.readdir(folderPath, (err, files) => {
+  const directoryPath = path.join(__dirname, folder);
+  fs.readdir(directoryPath, (err, files) => {
     if (err) {
-      return res.status(500).send('Gagal membaca folder');
+      console.error(`Gagal membaca folder ${folder}:`, err);
+      return res.status(500).json({ error: `Gagal membaca folder ${folder}` });
     }
-    const fileList = files.filter(file => file.endsWith('.html') || file.endsWith('.js'));
-    res.json(fileList);
+
+    res.json({ folder, files });
   });
 });
 
 // Endpoint untuk menghapus file
-app.delete('/delete-file', (req, res) => {
-  const folder = req.query.folder === 'public' ? 'public' : 'routes';
-  const fileName = req.query.filename;
-  const filePath = path.join(__dirname, folder, fileName);
+app.delete('/files', (req, res) => {
+  const folder = req.body.folder;
+  const fileName = req.body.fileName;
 
+  if (!folder || !fileName || (folder !== 'public' && folder !== 'routes')) {
+    return res.status(400).json({ error: 'Parameter folder atau fileName tidak valid.' });
+  }
+
+  const filePath = path.join(__dirname, folder, fileName);
   fs.unlink(filePath, (err) => {
     if (err) {
-      return res.status(500).json({ message: 'Gagal menghapus file' });
+      console.error(`Gagal menghapus file ${fileName} di folder ${folder}:`, err);
+      return res.status(500).json({ error: `Gagal menghapus file ${fileName}` });
     }
-    res.json({ message: `File ${fileName} berhasil dihapus` });
+
+    console.log(`File ${fileName} berhasil dihapus dari folder ${folder}`);
+    res.json({ message: `File ${fileName} berhasil dihapus dari folder ${folder}` });
   });
+});
+
+// Fungsi untuk memperbarui package.json dan menginstal ulang modul
+function updatePackageJson(moduleName, callback) {
+  const packageJsonPath = path.join(__dirname, 'package.json');
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+
+  if (!packageJson.dependencies) packageJson.dependencies = {};
+  if (!packageJson.dependencies[moduleName]) {
+    packageJson.dependencies[moduleName] = 'latest';
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+
+    console.log(`Menambahkan ${moduleName} ke package.json dan menjalankan npm install...`);
+    exec('npm install', (err, stdout, stderr) => {
+      if (err) {
+        console.error('Gagal menginstal modul:', err);
+      } else {
+        console.log(stdout);
+        console.error(stderr);
+        callback();
+      }
+    });
+  } else {
+    callback();
+  }
+}
+
+// Fungsi untuk meregistrasi endpoint dinamis dari folder routes
+function registerRoutes() {
+  const routesPath = path.join(__dirname, 'routes');
+  fs.readdir(routesPath, (err, files) => {
+    if (err) {
+      console.error('Gagal membaca folder routes:', err);
+      return;
+    }
+
+    files.forEach((file) => {
+      if (file.endsWith('.js')) {
+        const routePath = `/api/${file.replace('.js', '')}`;
+        const modulePath = path.join(__dirname, 'routes', file);
+
+        // Hapus cache sebelumnya (hot reload)
+        delete require.cache[require.resolve(modulePath)];
+
+        // Daftarkan endpoint
+        try {
+          const route = require(modulePath);
+          app.use(routePath, route);
+          console.log(`Endpoint otomatis terdaftar: ${routePath}`);
+        } catch (err) {
+          console.error(`Gagal meregistrasi file ${file} sebagai endpoint:`, err);
+        }
+      }
+    });
+  });
+}
+
+// Register endpoints dinamis saat server mulai
+registerRoutes();
+
+// Monitor perubahan pada folder routes
+fs.watch(path.join(__dirname, 'routes'), (eventType, filename) => {
+  if (eventType === 'change' || eventType === 'rename') {
+    console.log(`Perubahan terdeteksi pada file: ${filename}`);
+    registerRoutes(); // Daftarkan ulang endpoint
+  }
 });
 
 // Start server
