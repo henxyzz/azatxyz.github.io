@@ -58,7 +58,7 @@ const tebaknegaraList = [
 
 router.get('/', (req, res) => {
   const randomIndex = Math.floor(Math.random() * tebaknegaraList.length);
-  const questionData = tebakNegaraList[randomIndex];
+  const questionData = tebaknegaraList[randomIndex];
 
   res.json({
     question: questionData.question,
@@ -67,4 +67,4 @@ router.get('/', (req, res) => {
   });
 });
 
-module.exports = router;ports = router;
+module.exports = router;
