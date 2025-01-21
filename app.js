@@ -10,7 +10,7 @@ const { exec } = require('child_process');
 dotenv.config();
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000; // Gunakan port dinamis untuk Clever Cloud
 
 // Rate Limiting
 const limiter = rateLimit({
@@ -28,10 +28,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Verifikasi password untuk akses halaman upload
 app.get('/upload', (req, res) => {
-  const password = req.query.password;  // Mengambil password dari query string
+  const password = req.query.password; // Mengambil password dari query string
 
   if (password === process.env.UPLOAD_PASSWORD) {
-    res.sendFile(path.join(__dirname, 'public', 'upload.html'));  // Akses halaman upload
+    res.sendFile(path.join(__dirname, 'public', 'upload.html')); // Akses halaman upload
   } else {
     res.status(403).send('Password salah. Akses ditolak.');
   }
@@ -40,17 +40,13 @@ app.get('/upload', (req, res) => {
 // Setup Multer Storage untuk file yang di-upload
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const destination = req.body.destination;
-    const folder = destination === 'public' ? 'public' : 'routes'; // Pilih folder tujuan
-    cb(null, path.join(__dirname, folder)); // Tentukan folder tujuan
+    const destination = req.body.destination || 'public'; // Default ke public jika kosong
+    const folder = destination === 'public' ? 'public' : 'routes';
+    cb(null, path.join(__dirname, folder));
   },
   filename: (req, file, cb) => {
-    const destination = req.body.destination;
-    if (destination === 'public') {
-      cb(null, file.originalname); // Nama file HTML tetap sama
-    } else {
-      cb(null, req.body.name || file.originalname); // Jika file JS, pakai nama yang diberikan user
-    }
+    const customName = req.body.name || file.originalname; // Default ke originalname jika name kosong
+    cb(null, customName);
   },
 });
 
@@ -58,7 +54,17 @@ const upload = multer({ storage });
 
 // Endpoint untuk menangani file upload
 app.post('/upload', upload.single('file'), (req, res) => {
-  const folder = req.body.destination;
+  console.log('req.file:', req.file); // Debug informasi file
+  console.log('req.body:', req.body); // Debug informasi form
+
+  if (!req.file) {
+    return res.status(400).json({
+      success: false,
+      message: "File tidak ditemukan. Pastikan form upload memiliki field 'file'.",
+    });
+  }
+
+  const folder = req.body.destination || 'public';
   const filePath = path.join(__dirname, folder, req.file.filename);
 
   if (folder === 'routes') {
