@@ -4,7 +4,7 @@ const cheerio = require('cheerio');
 const router = express.Router();
 
 // Endpoint untuk mendapatkan daftar turnamen
-router.get('/latest', async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { data } = await axios.get('https://infotourney.com/tournament/mobile-legends');
     const $ = cheerio.load(data);
@@ -48,3 +48,4 @@ router.get('/latest', async (req, res) => {
 });
 
 module.exports = router;
+uter;

@@ -118,19 +118,19 @@ async function bukkitSearch(keyword) {
     }
 }
 
-// Rute utama yang bisa menangani semua jenis request berdasarkan query parameter
+// Rute utama untuk menangani request berdasarkan parameter "mode"
 router.get('/', async (req, res) => {
-    const { action, url, keyword } = req.query;
+    const { mode, url, keyword } = req.query;
 
-    if (!action) {
+    if (!mode) {
         return res.status(400).json({
             success: false,
-            message: 'Parameter "action" wajib diisi. Pilih antara "detail", "populer", atau "search".'
+            message: 'Parameter "mode" wajib diisi. Pilih antara "detail", "populer", atau "search".'
         });
     }
 
     try {
-        if (action === 'detail') {
+        if (mode === 'detail') {
             if (!url) {
                 return res.status(400).json({
                     success: false,
@@ -144,7 +144,7 @@ router.get('/', async (req, res) => {
             });
         }
 
-        if (action === 'populer') {
+        if (mode === 'populer') {
             const plugins = await bukkitPopuler();
             return res.json({
                 success: true,
@@ -152,7 +152,7 @@ router.get('/', async (req, res) => {
             });
         }
 
-        if (action === 'search') {
+        if (mode === 'search') {
             if (!keyword) {
                 return res.status(400).json({
                     success: false,
@@ -166,10 +166,10 @@ router.get('/', async (req, res) => {
             });
         }
 
-        // Jika action tidak dikenali
+        // Jika mode tidak dikenali
         return res.status(404).json({
             success: false,
-            message: 'Action tidak ditemukan. Pilih antara "detail", "populer", atau "search".'
+            message: 'Mode tidak ditemukan. Pilih antara "detail", "populer", atau "search".'
         });
 
     } catch (error) {
@@ -179,5 +179,7 @@ router.get('/', async (req, res) => {
         });
     }
 });
+
+module.exports = router;});
 
 module.exports = router;

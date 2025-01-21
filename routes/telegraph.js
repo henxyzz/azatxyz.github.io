@@ -3,7 +3,7 @@ const axios = require('axios');
 const router = express.Router();
 
 // Endpoint untuk upload gambar dalam format base64 atau URL
-router.get('/telegraph', async (req, res) => {
+router.get('/', async (req, res) => {
   const { image, url } = req.query;
 
   // Validasi parameter
@@ -62,4 +62,4 @@ router.get('/telegraph', async (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports = router;= router;

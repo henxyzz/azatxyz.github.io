@@ -56,7 +56,7 @@ const tebaknegaraList = [
   // Tambahkan lebih banyak negara dan clue lainnya jika diperlukan.
 ];
 
-router.get('/api/tebaknegara', (req, res) => {
+router.get('/', (req, res) => {
   const randomIndex = Math.floor(Math.random() * tebaknegaraList.length);
   const questionData = tebakNegaraList[randomIndex];
 
@@ -67,4 +67,4 @@ router.get('/api/tebaknegara', (req, res) => {
   });
 });
 
-module.exports = router;
+module.exports = router;ports = router;

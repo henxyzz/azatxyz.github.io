@@ -7,23 +7,40 @@ const defaultHeaders = {
   "accept-language": "id-ID",
 };
 
-// Venice Chatbot API
-router.get("/chat", async (req, res) => {
+// Endpoint Chatbot API menggunakan query parameter biasa
+router.get("/", async (req, res) => {
   const question = req.query.question;
   if (!question) {
-    return res.status(400).json({ error: "Query 'question' tidak boleh kosong." });
+    return res.status(400).json({
+      error: "Query 'question' tidak boleh kosong.",
+      usage: {
+        endpoint: "/api/venice",
+        method: "GET",
+        query: { question: "Pertanyaan Anda" },
+      },
+      author: "Azatxyz", // Menambahkan informasi author
+    });
   }
 
   try {
-    const response = await axios.post("https://venice.ai/api/inference/chat", {
-      question,
-    }, {
-      headers: defaultHeaders,
-    });
+    const response = await axios.post(
+      "https://venice.ai/api/inference/chat",
+      { question },
+      { headers: defaultHeaders }
+    );
 
-    res.json({ success: true, answer: response.data });
+    res.json({
+      success: true,
+      answer: response.data.answer || "Tidak ada jawaban yang diberikan.",
+      author: "Azatxyz", // Menambahkan informasi author
+    });
   } catch (error) {
-    res.status(500).json({ error: "Terjadi kesalahan pada layanan chatbot." });
+    console.error("Error Chatbot API:", error.message);
+    res.status(500).json({
+      error: "Terjadi kesalahan pada layanan chatbot.",
+      details: error.message,
+      author: "Azatxyz", // Menambahkan informasi author
+    });
   }
 });
 
