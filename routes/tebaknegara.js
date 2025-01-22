@@ -63,6 +63,7 @@ router.get('/', (req, res) => {
   res.json({
     question: questionData.question,
     clue: questionData.clue,
+    answer: questionData.answer,
     message: 'Selamat mencoba! Tebak negara berdasarkan clue di atas.'
   });
 });
