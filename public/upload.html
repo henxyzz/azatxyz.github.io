@@ -51,7 +51,7 @@
 <body>
   <div class="upload-container">
     <h2>Upload File</h2>
-    <form action="/upload" method="POST" enctype="multipart/form-data">
+    <form id="upload-form" action="/upload" method="POST" enctype="multipart/form-data" onsubmit="return validateUpload()">
       <label for="destination">Pilih tujuan upload:</label>
       <select name="destination" id="destination" onchange="toggleInputFields()">
         <option value="public">Public (HTML)</option>
@@ -83,23 +83,9 @@
     </form>
   </div>
 
-  <h3>Daftar File</h3>
-
-  <!-- Tombol untuk menampilkan file di folder public atau routes -->
-  <div>
-    <button class="folder-button" onclick="showFiles('public')">Lihat Files Public</button>
-    <button class="folder-button" onclick="showFiles('routes')">Lihat Files Routes</button>
-  </div>
-
-  <div id="file-list"></div>
-
   <script>
-    let currentFolder = 'public'; // Set default folder to public
-
     function toggleInputFields() {
       const destination = document.getElementById('destination').value;
-      currentFolder = destination; // Update the current folder based on dropdown selection
-      fetchFiles(currentFolder);  // Fetch files for the selected folder
       if (destination === 'public') {
         document.getElementById('html-upload').style.display = 'block';
         document.getElementById('js-upload').style.display = 'none';
@@ -109,78 +95,25 @@
       }
     }
 
-    async function fetchFiles(folder) {
-      const response = await fetch(`/files?folder=${folder}`);
-      const data = await response.json();
+    function validateUpload() {
+      const destination = document.getElementById('destination').value;
+      let fileInput, textareaInput;
 
-      if (response.ok) {
-        renderFileList(folder, data.files);
+      if (destination === 'public') {
+        fileInput = document.getElementById('html-file').value;
+        textareaInput = document.getElementById('html-code').value.trim();
       } else {
-        alert(data.error);
+        fileInput = document.getElementById('file').value;
+        textareaInput = document.getElementById('js-code').value.trim();
       }
-    }
 
-    function renderFileList(folder, files) {
-      const fileList = document.getElementById('file-list');
-      fileList.innerHTML = `<h4>Folder: ${folder}</h4>`;
-
-      if (files && files.length > 0) {
-        files.forEach((file) => {
-          const fileItem = document.createElement('div');
-          fileItem.style.marginBottom = '10px';
-
-          fileItem.innerHTML = `
-            <span>${file}</span>
-            <button onclick="viewFile('${folder}', '${file}')">Lihat</button>
-            <button onclick="confirmDeleteFile('${folder}', '${file}')">Hapus</button>
-          `;
-
-          fileList.appendChild(fileItem);
-        });
-      } else {
-        fileList.innerHTML += '<p>Tidak ada file di folder ini.</p>';
+      if (!fileInput && !textareaInput) {
+        alert('Anda harus mengisi salah satu: file atau kode.');
+        return false;
       }
+
+      return true;
     }
-
-    function viewFile(folder, fileName) {
-      if (folder === 'public') {
-        window.open(`/${fileName}`, '_blank');
-      } else {
-        alert('Tidak dapat membuka file route di browser.');
-      }
-    }
-
-    function confirmDeleteFile(folder, fileName) {
-      const isConfirmed = confirm(`Apakah Anda yakin ingin menghapus file ${fileName}?`);
-      if (isConfirmed) {
-        deleteFile(folder, fileName);
-      }
-    }
-
-    async function deleteFile(folder, fileName) {
-      const response = await fetch('/files', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folder, fileName }),
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        alert(data.message);
-        fetchFiles(folder);  // Refresh daftar file setelah penghapusan
-      } else {
-        alert(data.error);
-      }
-    }
-
-    function showFiles(folder) {
-      fetchFiles(folder);  // Fetch and display files for the selected folder
-    }
-
-    // Load files for the default folder (public) when the page is loaded
-    document.addEventListener('DOMContentLoaded', () => {
-      fetchFiles(currentFolder);  // Default to showing public files
-    });
   </script>
 </body>
 </html>
