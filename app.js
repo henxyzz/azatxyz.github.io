@@ -37,6 +37,27 @@ app.get('/upload', (req, res) => {
   }
 });
 
+// Endpoint untuk menampilkan dokumentasi API
+app.get('/docs', (req, res) => {
+  const routesPath = path.join(__dirname, 'routes');
+
+  // Ambil semua file di folder routes
+  fs.readdir(routesPath, (err, files) => {
+    if (err) {
+      console.error('Gagal membaca folder routes:', err);
+      return res.status(500).send('Gagal memuat dokumentasi.');
+    }
+
+    // Filter file .js dan buat daftar endpoint
+    const apiEndpoints = files
+      .filter((file) => file.endsWith('.js'))
+      .map((file) => `/api/${file.replace('.js', '')}`);
+
+    // Kirim file docs.html dan daftar API ke klien
+    res.sendFile(path.join(__dirname, 'public', 'docs.html'), { headers: { 'x-api-list': JSON.stringify(apiEndpoints) } });
+  });
+});
+
 // Setup Multer Storage untuk file yang di-upload
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
