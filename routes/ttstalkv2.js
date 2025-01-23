@@ -1,64 +1,58 @@
-const express = require('express');
-const axios = require('axios');
+const express = require("express");
 const router = express.Router();
+const axios = require("axios");
+const cheerio = require("cheerio");
 
-// Endpoint untuk mendapatkan data TikTok berdasarkan username
-router.get('/', async (req, res) => {
-  const { username } = req.query;
+async function tiktokStalk(username) {
+    try {
+        const response = await axios.get(`https://www.tiktok.com/@${username}?_t=ZS-8tHANz7ieoS&_r=1`);
+        const html = response.data;
+        const $ = cheerio.load(html);
+        const scriptData = $('#__UNIVERSAL_DATA_FOR_REHYDRATION__').html();
+        const parsedData = JSON.parse(scriptData);
 
-  // Validasi parameter username
-  if (!username) {
-    return res.status(400).json({
-      success: false,
-      message: 'Silakan masukkan username TikTok.',
-      usage: {
-        endpoint: '/ttstalkv2?username=contoh',
-        method: 'GET',
-        query: { username: 'username_TikTok' },
-      },
-    });
-  }
+        const userDetail = parsedData.__DEFAULT_SCOPE__?.['webapp.user-detail'];
+        if (!userDetail) {
+            throw new Error('User tidak ditemukan');
+        }
 
-  try {
-    // Mengambil data TikTok dari API eksternal
-    const response = await axios.get(`https://api.rifandavinci.my.id/generate/tiktok?username=${username}`);
+        const userInfo = userDetail.userInfo?.user;
+        const stats = userDetail.userInfo?.stats;
 
-    const contentType = response.headers['content-type'];
+        const metadata = {
+            userInfo: {
+                id: userInfo?.id || null,
+                username: userInfo?.uniqueId || null,
+                nama: userInfo?.nickname || null,
+                avatar: userInfo?.avatarLarger || null,
+                bio: userInfo?.signature || null,
+                verifikasi: userInfo?.verified || false,
+                totalfollowers: stats?.followerCount || 0,
+                totalmengikuti: stats?.followingCount || 0,
+                totaldisukai: stats?.heart || 0,
+                totalvideo: stats?.videoCount || 0,
+                totalteman: stats?.friendCount || 0,
+            }
+        };
 
-    // Jika konten adalah gambar
-    if (contentType && contentType.includes('image')) {
-      const imageBuffer = response.data;
-
-      return res.status(200).json({
-        success: true,
-        message: `Hasil Scrape TikTok untuk @${username}`,
-        image: imageBuffer.toString('base64'),
-      });
-    } else {
-      // Jika bukan gambar, coba parsing JSON
-      const data = response.data;
-
-      if (data && data.result && data.result.length > 0) {
-        return res.json({
-          success: true,
-          message: `Hasil Scrape TikTok untuk @${username}`,
-          images: data.result,
-        });
-      } else {
-        return res.status(404).json({
-          success: false,
-          message: `Maaf, tidak ada hasil yang ditemukan untuk @${username}.`,
-        });
-      }
+        return metadata;
+    } catch (error) {
+        return { error: error.message };
     }
-  } catch (error) {
-    console.error('Error saat mengambil data TikTok:', error);
-    return res.status(500).json({
-      success: false,
-      message: `Ups! Terjadi kesalahan saat mengambil data TikTok @${username}.`,
-      error: error.message,
-    });
-  }
+}
+
+router.get("/", async (req, res) => {
+    const username = req.query.username;
+    if (!username) {
+        return res.status(400).json({ error: "Parameter 'username' wajib diisi" });
+    }
+
+    const result = await tiktokStalk(username);
+    if (result.error) {
+        return res.status(404).json({ error: result.error });
+    }
+
+    res.json(result);
 });
 
 module.exports = router;
