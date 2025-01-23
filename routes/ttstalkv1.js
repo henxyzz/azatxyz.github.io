@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
       success: false,
       message: 'Silakan masukkan username TikTok.',
       usage: {
-        endpoint: '/tiktokstalk',
+        endpoint: '/ttstalkv1?username=contoh',
         method: 'GET',
         query: { username: 'username_TikTok' },
       },
