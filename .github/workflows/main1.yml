@@ -28,7 +28,7 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@4.1.3
         with:
-          branch: main  # Branch tempat GitHub Pages berada
+          branch: gh-pages  # Branch tempat GitHub Pages berada
           folder: public    # Folder tempat hasil build berada
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
