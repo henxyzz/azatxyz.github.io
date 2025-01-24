@@ -1,0 +1,34 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main  # Ganti dengan branch yang Anda gunakan
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate static files
+        run: |
+          node app.js  # Jalankan app.js untuk generate HTML statis
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@4.1.3
+        with:
+          branch: gh-pages  # Branch tempat GitHub Pages berada
+          folder: public    # Folder tempat hasil build berada
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
