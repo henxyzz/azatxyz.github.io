@@ -31,4 +31,4 @@ jobs:
           branch: gh-pages  # Branch tempat GitHub Pages berada
           folder: public    # Folder tempat hasil build berada
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+          TOKEN: ${{ secrets.TOKEN }}
