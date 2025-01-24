@@ -2,18 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"> <!-- Lock screen agar tidak bisa di-zoom -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>API Documentation</title>
   <style>
-    /* Cyberpunk Style */
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+    /* Modern Dark Blue Theme */
+    @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
 
     body {
-      font-family: 'Orbitron', sans-serif;
-      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-      color: #00ffe0;
-      padding: 20px;
+      font-family: 'Roboto Mono', monospace;
+      background: linear-gradient(135deg, #002147, #00112a);
+      color: #ffffff;
       margin: 0;
+      padding: 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -23,105 +23,115 @@
 
     h1 {
       text-align: center;
-      font-size: 2.5rem; /* Responsif */
-      color: #ff0080;
-      text-shadow: 0 0 15px #ff0080, 0 0 30px #ff0080;
+      color: #1e90ff;
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      text-shadow: 0 0 10px #1e90ff;
     }
 
     p {
-      text-align: center;
-      font-size: 1rem; /* Responsif */
-      color: #00ffe0;
-      margin-bottom: 20px;
+      color: #b0c4de;
+      font-size: 1rem;
+      margin-bottom: 30px;
     }
 
     ul {
       list-style: none;
       padding: 0;
-      width: 90%; /* Responsif */
-      max-width: 800px; /* Batas lebar maksimum */
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      width: 100%;
+      max-width: 800px;
     }
 
     li {
-      background: rgba(0, 0, 0, 0.7);
-      border: 2px solid #ff0080;
+      background: #001f3f;
+      border: 1px solid #1e90ff;
       padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 0 15px #ff0080;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       transition: transform 0.3s, box-shadow 0.3s;
-      text-align: center; /* Center content */
     }
 
     li:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 25px #00ffe0;
+      transform: scale(1.02);
+      box-shadow: 0 0 15px #1e90ff;
     }
 
     a {
-      color: #00ffe0;
+      color: #00bfff;
       text-decoration: none;
-      font-size: 1rem; /* Responsif */
+      font-size: 1rem;
     }
 
     a:hover {
-      color: #ff0080;
-      text-shadow: 0 0 10px #ff0080;
+      color: #87ceeb;
+      text-shadow: 0 0 5px #87ceeb;
+    }
+
+    .method {
+      font-weight: bold;
+      color: #00fa9a;
+      background: #013a63;
+      padding: 5px 10px;
+      border-radius: 5px;
     }
 
     footer {
       text-align: center;
       margin-top: 30px;
-      color: #888;
-      font-size: 0.8rem;
+      color: #708090;
+      font-size: 0.9rem;
     }
 
     footer a {
-      color: #ff0080;
+      color: #1e90ff;
       text-decoration: none;
     }
 
     footer a:hover {
-      text-shadow: 0 0 10px #ff0080;
-    }
-
-    @media (max-width: 768px) {
-      h1 {
-        font-size: 2rem; /* Responsif untuk layar kecil */
-      }
-      p, a {
-        font-size: 0.9rem; /* Teks lebih kecil */
-      }
-      li {
-        padding: 10px; /* Padding lebih kecil */
-      }
+      text-shadow: 0 0 5px #1e90ff;
     }
   </style>
 </head>
 <body>
   <h1>API Documentation</h1>
-  <p>Explore the endpoints available in this server</p>
+  <p>Explore the endpoints available in this server:</p>
   <ul id="api-list"></ul>
 
   <footer>
-    <p>Made with by <a href="#">Azatxyz</a></p>
+    <p>Built by <a href="#">Azatxyz</a></p>
   </footer>
 
   <script>
-    // Ambil daftar API dari header x-api-list
+    // Fetch daftar API dari header x-api-list
     fetch('/docs').then(res => {
       const apiList = JSON.parse(res.headers.get('x-api-list'));
 
-      // Tampilkan daftar API di halaman
+      // Dummy metode HTTP, update ini sesuai backend
+      const methodMapping = {
+        "GET": "Retrieves data",
+        "POST": "Submits data",
+      };
+
       const apiListContainer = document.getElementById('api-list');
       apiList.forEach(api => {
         const listItem = document.createElement('li');
+        
+        // Tambahkan metode HTTP berdasarkan nama file
+        const method = api.includes('post') ? 'POST' : 'GET';
+
+        const methodBadge = document.createElement('span');
+        methodBadge.textContent = method;
+        methodBadge.className = 'method';
+
         const link = document.createElement('a');
         link.href = api;
         link.textContent = api;
+
         listItem.appendChild(link);
+        listItem.appendChild(methodBadge);
         apiListContainer.appendChild(listItem);
       });
     }).catch(err => {
