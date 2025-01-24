@@ -22,9 +22,9 @@ jobs:
         run: npm install
 
       - name: Generate static files
-  run: |
-    nohup node app.js &
-    
+        run: |
+          nohup node app.js &  # Menjalankan server di background untuk generate file statis
+
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@4.1.3
         with:
